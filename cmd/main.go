@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"BIOSGO/config"
-	"BIOSGO/routes"
+	"github.com/hansendputra/BIOSGO/config"
+	"github.com/hansendputra/BIOSGO/routes"
 )
 
 func main() {
