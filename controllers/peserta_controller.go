@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"BIOSGO/models"
+	"hansendputra.com/biosgo/models"
 )
 
 func GetPeserta(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		w.Header().Set("Content-Type", "application/json")
 
 		startDate := r.URL.Query().Get("startdate")

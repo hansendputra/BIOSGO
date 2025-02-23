@@ -3,11 +3,14 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
-	"BIOSGO/models"
+	"hansendputra.com/biosgo/models"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
 
@@ -125,5 +128,59 @@ func DeleteUser(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+var jwtKey = []byte("kdfjasjdfoijjeoij1l2kejlkdasjjadjl")
+
+func Login(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		var creds models.Credentials
+		err := json.NewDecoder(r.Body).Decode(&creds)
+		if err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		// Replace this with your own user authentication logic
+		var storedCreds models.Credentials
+		err = db.QueryRow("SELECT username, password FROM users WHERE username = ?", creds.Username).Scan(&storedCreds.Username, &storedCreds.Password)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		if creds.Password != storedCreds.Password {
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+			return
+		}
+
+		expirationTime := time.Now().Add(24 * time.Hour)
+		claims := &models.Claims{
+			Username: creds.Username,
+			StandardClaims: jwt.StandardClaims{
+				ExpiresAt: expirationTime.Unix(),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := token.SignedString(jwtKey)
+		if err != nil {
+			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+			return
+		}
+
+		// http.SetCookie(w, &http.Cookie{
+		// 	Name:    "token",
+		// 	Value:   tokenString,
+		// 	Expires: expirationTime,
+		// })
+		responseData := fmt.Sprintf(`{"token": %s}`, tokenString)
+		w.Write([]byte(responseData))
 	}
 }
